@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,8 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/components/ui/use-toast";
 import { Loader2 } from "lucide-react";
+import { addQueue } from "@/utils/queueService";
+import { requestNotificationPermission } from "@/utils/firebase";
 
 // Mock service types and time slots for the frontend demo
 const serviceTypes = [
@@ -56,6 +58,11 @@ const QueueBookingPage = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
   
+  useEffect(() => {
+    // Request notification permission when component mounts
+    requestNotificationPermission();
+  }, []);
+  
   // Check authentication status
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   
@@ -71,17 +78,23 @@ const QueueBookingPage = () => {
     
     // For demo: simulate API call delay
     setTimeout(() => {
+      const userName = localStorage.getItem('userName') || "Anonymous User";
+      const userId = localStorage.getItem('userId') || Date.now().toString();
+      
       // Generate a random queue number between 1-30
       const queueNumber = Math.floor(Math.random() * 30) + 1;
       
       const confirmation = {
         id: `Q-${Date.now().toString().slice(-6)}`,
-        serviceType: serviceTypes.find(s => s.id === serviceType)?.name,
-        timeSlot: timeSlots.find(t => t.id === timeSlot)?.time,
+        name: userName,
+        service: serviceTypes.find(s => s.id === serviceType)?.name || "",
+        time: timeSlots.find(t => t.id === timeSlot)?.time || "",
+        status: "Waiting" as const,
         queueNumber: queueNumber,
         estimatedWaitTime: queueNumber * 5, // 5 minutes per person
         purpose: purpose,
         urgency: isUrgent === "urgent" ? "Urgent" : "Standard",
+        userId: userId,
         date: new Date().toLocaleDateString('en-US', {
           weekday: 'long',
           year: 'numeric',
@@ -89,6 +102,9 @@ const QueueBookingPage = () => {
           day: 'numeric'
         })
       };
+      
+      // Add to our centralized queue service
+      addQueue(confirmation);
       
       setBookingConfirmation(confirmation);
       

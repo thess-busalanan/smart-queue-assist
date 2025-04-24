@@ -1,5 +1,4 @@
-
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
@@ -24,80 +23,13 @@ import {
   RefreshCw,
   Search,
 } from "lucide-react";
-
-// Mock data for queue management
-const initialQueues = [
-  {
-    id: "S001",
-    name: "John Doe",
-    service: "Enrollment Assistance",
-    time: "10:30 AM",
-    status: "Waiting",
-    queueNumber: 1,
-    phone: "123-456-7890",
-    email: "john@example.com",
-  },
-  {
-    id: "S002",
-    name: "Jane Smith",
-    service: "Document Request",
-    time: "10:35 AM",
-    status: "Waiting",
-    queueNumber: 2,
-    phone: "123-456-7891",
-    email: "jane@example.com",
-  },
-  {
-    id: "S003",
-    name: "Robert Johnson",
-    service: "Scholarship Application",
-    time: "10:40 AM",
-    status: "In Progress",
-    queueNumber: 3,
-    phone: "123-456-7892",
-    email: "robert@example.com",
-  },
-  {
-    id: "S004",
-    name: "Emily Davis",
-    service: "Payment Processing",
-    time: "10:45 AM",
-    status: "Waiting",
-    queueNumber: 4,
-    phone: "123-456-7893",
-    email: "emily@example.com",
-  },
-  {
-    id: "S005",
-    name: "Michael Brown",
-    service: "Document Request",
-    time: "10:50 AM",
-    status: "No Show",
-    queueNumber: 5,
-    phone: "123-456-7894",
-    email: "michael@example.com",
-  },
-  {
-    id: "S006",
-    name: "Amanda Wilson",
-    service: "Enrollment Assistance",
-    time: "11:00 AM",
-    status: "Served",
-    queueNumber: 6,
-    phone: "123-456-7895",
-    email: "amanda@example.com",
-  },
-  {
-    id: "S007",
-    name: "Daniel Lee",
-    service: "Scholarship Application",
-    time: "11:15 AM",
-    status: "Cancelled",
-    queueNumber: 7,
-    phone: "123-456-7896",
-    email: "daniel@example.com",
-  },
-];
+import { 
+  getAllQueues, 
+  addQueue, 
+  updateQueueStatus, 
+  QueueItem 
+} from "@/utils/queueService";
+import { showNotification } from "@/utils/firebase";
 
 // Service types
 const serviceTypes = [
@@ -109,10 +41,10 @@ const serviceTypes = [
 ];
 
 const QueueManagementPage = () => {
-  const [queues, setQueues] = useState(initialQueues);
+  const [queues, setQueues] = useState<QueueItem[]>([]);
   const [activeTab, setActiveTab] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
-  const [selectedQueue, setSelectedQueue] = useState<any>(null);
+  const [selectedQueue, setSelectedQueue] = useState<QueueItem | null>(null);
   const [isAddingQueue, setIsAddingQueue] = useState(false);
   const [newQueue, setNewQueue] = useState({
     name: "",
@@ -135,6 +67,11 @@ const QueueManagementPage = () => {
     return null;
   }
 
+  // Load queues from our service
+  useEffect(() => {
+    setQueues(getAllQueues());
+  }, []);
+
   // Filter queues based on active tab and search query
   const filteredQueues = queues.filter((queue) => {
     // Filter by status tab
@@ -156,7 +93,9 @@ const QueueManagementPage = () => {
   });
   
   // Handle queue actions
-  const callStudent = (queue: any) => {
+  const callStudent = (queue: QueueItem) => {
+    updateQueueStatus(queue.id, "In Progress");
+    
     setQueues(
       queues.map((q) =>
         q.id === queue.id ? { ...q, status: "In Progress" } : q
@@ -167,9 +106,17 @@ const QueueManagementPage = () => {
       title: "Student Called",
       description: `${queue.name} has been called for service.`,
     });
+
+    // Send notification to the student (in a real app, this would be sent to the specific user)
+    showNotification(
+      "It's Your Turn!", 
+      `${queue.name}, please proceed to the service counter.`
+    );
   };
   
-  const markAsServed = (queue: any) => {
+  const markAsServed = (queue: QueueItem) => {
+    updateQueueStatus(queue.id, "Served");
+    
     setQueues(
       queues.map((q) =>
         q.id === queue.id ? { ...q, status: "Served" } : q
@@ -182,7 +129,9 @@ const QueueManagementPage = () => {
     });
   };
   
-  const markAsNoShow = (queue: any) => {
+  const markAsNoShow = (queue: QueueItem) => {
+    updateQueueStatus(queue.id, "No Show");
+    
     setQueues(
       queues.map((q) =>
         q.id === queue.id ? { ...q, status: "No Show" } : q
@@ -206,13 +155,27 @@ const QueueManagementPage = () => {
     }
     
     const newId = `S${String(queues.length + 1).padStart(3, '0')}`;
-    const newQueueItem = {
-      ...newQueue,
+    const newQueueItem: QueueItem = {
       id: newId,
+      name: newQueue.name,
+      service: newQueue.service,
+      time: newQueue.time,
+      phone: newQueue.phone,
+      email: newQueue.email,
       status: "Waiting",
       queueNumber: queues.length + 1,
+      date: new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      })
     };
     
+    // Add to our central service
+    addQueue(newQueueItem);
+    
+    // Update local state
     setQueues([...queues, newQueueItem]);
     setIsAddingQueue(false);
     setNewQueue({
@@ -231,13 +194,22 @@ const QueueManagementPage = () => {
   };
   
   // View queue details
-  const viewQueueDetails = (queue: any) => {
+  const viewQueueDetails = (queue: QueueItem) => {
     setSelectedQueue(queue);
   };
   
   // Close queue details
   const closeQueueDetails = () => {
     setSelectedQueue(null);
+  };
+
+  // Refresh queues from the service
+  const refreshQueues = () => {
+    setQueues(getAllQueues());
+    toast({
+      title: "Queues Refreshed",
+      description: "The queue list has been updated with the latest data.",
+    });
   };
   
   return (
@@ -277,7 +249,7 @@ const QueueManagementPage = () => {
               <Plus className="mr-2 h-4 w-4" />
               Add Student
             </Button>
-            <Button variant="outline" onClick={() => setQueues(initialQueues)}>
+            <Button variant="outline" onClick={refreshQueues}>
               <RefreshCw className="mr-2 h-4 w-4" />
               Refresh
             </Button>

@@ -1,24 +1,33 @@
 
 import { useState } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { useNavigate, Link, useLocation } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/components/ui/use-toast";
+import { requestNotificationPermission } from "@/utils/firebase";
 
 const LoginPage = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
   const { toast } = useToast();
+
+  // Parse redirect URL from query parameters
+  const searchParams = new URLSearchParams(location.search);
+  const redirectUrl = searchParams.get("redirect") || "";
 
   // For frontend demo purposes only
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
+
+    // Request notification permissions
+    requestNotificationPermission();
 
     // Mock login logic (for frontend-only demo)
     setTimeout(() => {
@@ -30,6 +39,7 @@ const LoginPage = () => {
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', 'admin');
         localStorage.setItem('userName', 'Admin User');
+        localStorage.setItem('userId', 'admin-1');
         navigate('/admin/dashboard');
       } else if (email === 'student@example.com' && password === 'student123') {
         toast({
@@ -39,14 +49,33 @@ const LoginPage = () => {
         localStorage.setItem('isAuthenticated', 'true');
         localStorage.setItem('userRole', 'student');
         localStorage.setItem('userName', 'Student User');
-        navigate('/queue-booking');
+        localStorage.setItem('userId', 'student-1');
+        
+        // Redirect to the original destination or the queue booking page
+        navigate(redirectUrl ? `/${redirectUrl}` : '/queue-booking');
       } else {
-        toast({
-          variant: "destructive",
-          title: "Login failed",
-          description: "Invalid email or password. Try again.",
-        });
-        localStorage.setItem('isAuthenticated', 'false');
+        // Check if it's a new user email pattern (any email with password "password123")
+        if (email.includes('@') && password === 'password123') {
+          // Create a new student user
+          const newUserName = email.split('@')[0]; // Use part before @ as name
+          toast({
+            title: "Login successful",
+            description: `Welcome, ${newUserName}!`,
+          });
+          localStorage.setItem('isAuthenticated', 'true');
+          localStorage.setItem('userRole', 'student');
+          localStorage.setItem('userName', newUserName);
+          localStorage.setItem('userId', `student-${Date.now()}`);
+          
+          navigate(redirectUrl ? `/${redirectUrl}` : '/queue-booking');
+        } else {
+          toast({
+            variant: "destructive",
+            title: "Login failed",
+            description: "Invalid email or password. Try again.",
+          });
+          localStorage.setItem('isAuthenticated', 'false');
+        }
       }
       setIsLoading(false);
     }, 1000);

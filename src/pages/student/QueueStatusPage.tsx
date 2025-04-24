@@ -8,6 +8,8 @@ import { Progress } from "@/components/ui/progress";
 import { useToast } from "@/components/ui/use-toast";
 import { AlertCircle, Clock, Loader2 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { deleteQueue, getCurrentQueueNumber } from "@/utils/queueService";
+import { onMessageListener, showNotification } from "@/utils/firebase";
 
 const QueueStatusPage = () => {
   const [queueData, setQueueData] = useState<any>(null);
@@ -27,6 +29,19 @@ const QueueStatusPage = () => {
   }
 
   useEffect(() => {
+    // Subscribe to Firebase notifications
+    const unsubscribe = onMessageListener().then((payload: any) => {
+      console.log("Received message:", payload);
+      if (payload?.notification) {
+        const { title, body } = payload.notification;
+        showNotification(title, body);
+        toast({
+          title,
+          description: body,
+        });
+      }
+    });
+
     // Load queue data from local storage (for the frontend demo)
     const storedQueue = localStorage.getItem('queueBooking');
     
@@ -34,8 +49,12 @@ const QueueStatusPage = () => {
       const queueData = JSON.parse(storedQueue);
       setQueueData(queueData);
       
+      // Get current queue number from our service
+      const currentNumber = getCurrentQueueNumber();
+      setCurrentQueueNumber(currentNumber);
+      
       // Calculate time remaining based on the number of people ahead
-      const peopleAhead = queueData.queueNumber - currentQueueNumber;
+      const peopleAhead = queueData.queueNumber - currentNumber;
       const timePerPerson = 5; // 5 minutes per person
       setTimeRemaining(peopleAhead * timePerPerson);
       
@@ -50,6 +69,11 @@ const QueueStatusPage = () => {
               title: "Your turn is approaching",
               description: "Please be ready. You are 2 positions away.",
             });
+            
+            showNotification(
+              "Queue Alert", 
+              "Your turn is approaching. You are 2 positions away."
+            );
           }
           
           return newNumber;
@@ -58,7 +82,9 @@ const QueueStatusPage = () => {
       
       setLoading(false);
       
-      return () => clearInterval(interval);
+      return () => {
+        clearInterval(interval);
+      };
     } else {
       // If there's no queue data, redirect to booking page
       setLoading(false);
@@ -70,18 +96,24 @@ const QueueStatusPage = () => {
     
     // Simulate API call with timeout
     setTimeout(() => {
-      localStorage.removeItem('queueBooking');
-      
-      toast({
-        title: "Queue Cancelled",
-        description: "Your queue spot has been cancelled successfully.",
-      });
-      
-      setQueueData(null);
-      setLoading(false);
-      
-      // Redirect to booking page
-      navigate('/queue-booking');
+      if (queueData) {
+        // Remove from centralized queue service
+        deleteQueue(queueData.id);
+        
+        // Remove from local storage
+        localStorage.removeItem('queueBooking');
+        
+        toast({
+          title: "Queue Cancelled",
+          description: "Your queue spot has been cancelled successfully.",
+        });
+        
+        setQueueData(null);
+        setLoading(false);
+        
+        // Redirect to booking page
+        navigate('/queue-booking');
+      }
     }, 1000);
   };
 

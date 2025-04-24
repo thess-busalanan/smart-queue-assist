@@ -1,5 +1,5 @@
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -13,9 +13,11 @@ import {
   Clock,
   Calendar
 } from "lucide-react";
+import { getAllQueues, updateQueueStatus } from "@/utils/queueService";
 
 const AdminDashboardPage = () => {
   const navigate = useNavigate();
+  const [queues, setQueues] = useState([]);
   
   // Check if user is admin
   const userRole = localStorage.getItem('userRole');
@@ -26,30 +28,68 @@ const AdminDashboardPage = () => {
     return null;
   }
 
-  // Mock data for the admin dashboard
+  useEffect(() => {
+    // Load queues from our service
+    const allQueues = getAllQueues();
+    setQueues(allQueues);
+  }, []);
+
+  // Calculate dashboard stats
   const stats = [
-    { label: "Total Students in Queue", value: 18, icon: <Users className="h-5 w-5 text-blue-600" /> },
-    { label: "Students Served Today", value: 42, icon: <CheckCircle className="h-5 w-5 text-green-600" /> },
-    { label: "Average Wait Time", value: "14 min", icon: <Clock className="h-5 w-5 text-orange-600" /> },
-    { label: "Scheduled for Today", value: 65, icon: <Calendar className="h-5 w-5 text-purple-600" /> },
+    { 
+      label: "Total Students in Queue", 
+      value: queues.filter(q => q.status === "Waiting" || q.status === "In Progress").length,
+      icon: <Users className="h-5 w-5 text-blue-600" /> 
+    },
+    { 
+      label: "Students Served Today", 
+      value: queues.filter(q => q.status === "Served").length,
+      icon: <CheckCircle className="h-5 w-5 text-green-600" /> 
+    },
+    { 
+      label: "Average Wait Time", 
+      value: "14 min", 
+      icon: <Clock className="h-5 w-5 text-orange-600" /> 
+    },
+    { 
+      label: "Scheduled for Today", 
+      value: queues.length,
+      icon: <Calendar className="h-5 w-5 text-purple-600" /> 
+    },
   ];
   
-  // Mock queues data by service type
+  // Count queues by service type
   const queuesByService = [
-    { name: "Enrollment Assistance", count: 8, color: "bg-blue-500" },
-    { name: "Document Request", count: 5, color: "bg-green-500" },
-    { name: "Scholarship Application", count: 3, color: "bg-yellow-500" },
-    { name: "Payment Processing", count: 2, color: "bg-red-500" },
-  ];
+    { name: "Enrollment Assistance", count: queues.filter(q => q.service === "Enrollment Assistance").length, color: "bg-blue-500" },
+    { name: "Document Request", count: queues.filter(q => q.service === "Document Request").length, color: "bg-green-500" },
+    { name: "Scholarship Application", count: queues.filter(q => q.service === "Scholarship Application").length, color: "bg-yellow-500" },
+    { name: "Payment Processing", count: queues.filter(q => q.service === "Payment Processing").length, color: "bg-red-500" },
+    { name: "General Inquiry", count: queues.filter(q => q.service === "General Inquiry").length, color: "bg-purple-500" },
+  ].filter(item => item.count > 0);
   
-  // Mock upcoming queues
-  const upcomingQueues = [
-    { id: "S001", name: "John Doe", service: "Enrollment Assistance", time: "10:30 AM", status: "Waiting" },
-    { id: "S002", name: "Jane Smith", service: "Document Request", time: "10:35 AM", status: "Waiting" },
-    { id: "S003", name: "Robert Johnson", service: "Scholarship Application", time: "10:40 AM", status: "Waiting" },
-    { id: "S004", name: "Emily Davis", service: "Payment Processing", time: "10:45 AM", status: "Waiting" },
-    { id: "S005", name: "Michael Brown", service: "Document Request", time: "10:50 AM", status: "Waiting" },
-  ];
+  // Get upcoming queues
+  const upcomingQueues = queues.filter(q => q.status === "Waiting").slice(0, 5);
+
+  // Handle quick actions
+  const callNextStudent = () => {
+    const nextQueue = queues.find(q => q.status === "Waiting");
+    if (nextQueue) {
+      updateQueueStatus(nextQueue.id, "In Progress");
+      setQueues(queues.map(q => 
+        q.id === nextQueue.id ? {...q, status: "In Progress"} : q
+      ));
+    }
+  };
+
+  const markCurrentAsServed = () => {
+    const currentQueue = queues.find(q => q.status === "In Progress");
+    if (currentQueue) {
+      updateQueueStatus(currentQueue.id, "Served");
+      setQueues(queues.map(q => 
+        q.id === currentQueue.id ? {...q, status: "Served"} : q
+      ));
+    }
+  };
 
   return (
     <Layout>
