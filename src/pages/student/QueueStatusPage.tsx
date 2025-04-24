@@ -58,7 +58,7 @@ const QueueStatusPage = () => {
       const timePerPerson = 5; // 5 minutes per person
       setTimeRemaining(peopleAhead * timePerPerson);
       
-      // Simulate queue progress by moving forward one number every few seconds
+      // Simulate queue progress by moving forward one number every 2 minutes
       const interval = setInterval(() => {
         setCurrentQueueNumber(prevNumber => {
           const newNumber = prevNumber + 1;
@@ -78,7 +78,7 @@ const QueueStatusPage = () => {
           
           return newNumber;
         });
-      }, 10000); // Move forward every 10 seconds for demo
+      }, 120000); // Move forward every 2 minutes (120,000 milliseconds)
       
       setLoading(false);
       

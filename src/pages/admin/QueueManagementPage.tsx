@@ -70,10 +70,10 @@ const QueueManagementPage = () => {
     // Load queues initially
     loadQueueData();
 
-    // Set up an interval to refresh the queues every 10 seconds
+    // Set up an interval to refresh the queues every minute
     const interval = setInterval(() => {
       loadQueueData();
-    }, 10000);
+    }, 60000); // Refresh every 1 minute
 
     // Clean up the interval on component unmount
     return () => clearInterval(interval);
