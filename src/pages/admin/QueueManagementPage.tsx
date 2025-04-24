@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -66,14 +67,24 @@ const QueueManagementPage = () => {
   }
 
   useEffect(() => {
-    setQueues(getAllQueues());
+    // Load queues initially
+    loadQueueData();
 
+    // Set up an interval to refresh the queues every 10 seconds
     const interval = setInterval(() => {
-      setQueues(getAllQueues());
-    }, 30000);
+      loadQueueData();
+    }, 10000);
 
+    // Clean up the interval on component unmount
     return () => clearInterval(interval);
   }, []);
+
+  // Load queue data from the service
+  const loadQueueData = () => {
+    const loadedQueues = getAllQueues();
+    console.log("Loaded queues:", loadedQueues);
+    setQueues(loadedQueues);
+  };
 
   const filteredQueues = queues.filter((queue) => {
     if (activeTab !== "all" && queue.status.toLowerCase() !== activeTab) {
@@ -95,11 +106,8 @@ const QueueManagementPage = () => {
   const callStudent = (queue: QueueItem) => {
     updateQueueStatus(queue.id, "In Progress");
     
-    setQueues(
-      queues.map((q) =>
-        q.id === queue.id ? { ...q, status: "In Progress" } : q
-      )
-    );
+    // Refresh the queue data
+    loadQueueData();
     
     toast({
       title: "Student Called",
@@ -115,11 +123,8 @@ const QueueManagementPage = () => {
   const markAsServed = (queue: QueueItem) => {
     updateQueueStatus(queue.id, "Served");
     
-    setQueues(
-      queues.map((q) =>
-        q.id === queue.id ? { ...q, status: "Served" } : q
-      )
-    );
+    // Refresh the queue data
+    loadQueueData();
     
     toast({
       title: "Student Served",
@@ -130,11 +135,8 @@ const QueueManagementPage = () => {
   const markAsNoShow = (queue: QueueItem) => {
     updateQueueStatus(queue.id, "No Show");
     
-    setQueues(
-      queues.map((q) =>
-        q.id === queue.id ? { ...q, status: "No Show" } : q
-      )
-    );
+    // Refresh the queue data
+    loadQueueData();
     
     toast({
       title: "No Show",
@@ -160,7 +162,7 @@ const QueueManagementPage = () => {
       time: newQueue.time,
       phone: newQueue.phone,
       email: newQueue.email,
-      status: "Waiting",
+      status: "Waiting" as const,
       queueNumber: queues.length + 1,
       date: new Date().toLocaleDateString('en-US', {
         weekday: 'long',
@@ -172,7 +174,9 @@ const QueueManagementPage = () => {
     
     addQueue(newQueueItem);
     
-    setQueues([...queues, newQueueItem]);
+    // Refresh the queue data
+    loadQueueData();
+    
     setIsAddingQueue(false);
     setNewQueue({
       name: "",
@@ -198,7 +202,7 @@ const QueueManagementPage = () => {
   };
 
   const refreshQueues = () => {
-    setQueues(getAllQueues());
+    loadQueueData();
     toast({
       title: "Queues Refreshed",
       description: "The queue list has been updated with the latest data.",

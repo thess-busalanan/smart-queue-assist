@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import Layout from "@/components/layout/Layout";
@@ -5,7 +6,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { QueueBookingForm } from "@/components/queue/QueueBookingForm";
 import { QueueConfirmation } from "@/components/queue/QueueConfirmation";
 import { requestNotificationPermission } from "@/utils/firebase";
-import { addQueue, getAllQueues } from "@/utils/queueService";
+import { addQueue, getAllQueues, getCurrentQueueNumber } from "@/utils/queueService";
 
 const QueueBookingPage = () => {
   const [isLoading, setIsLoading] = useState(false);
@@ -26,9 +27,8 @@ const QueueBookingPage = () => {
     
     requestNotificationPermission();
     
-    const existingQueues = getAllQueues();
-    const lastQueueNumber = Math.max(...existingQueues.map(q => q.queueNumber), 0);
-    const newQueueNumber = lastQueueNumber + 1;
+    // Get the next available queue number using the service function
+    const newQueueNumber = getCurrentQueueNumber();
     
     const userName = localStorage.getItem('userName') || "Anonymous User";
     const userId = localStorage.getItem('userId') || Date.now().toString();
@@ -52,6 +52,7 @@ const QueueBookingPage = () => {
       })
     };
     
+    // Add the queue to the central storage
     addQueue(confirmation);
     
     setBookingConfirmation(confirmation);
