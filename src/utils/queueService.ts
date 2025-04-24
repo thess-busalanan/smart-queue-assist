@@ -91,7 +91,7 @@ export const initializeDemoData = () => {
         name: "John Doe",
         service: "Enrollment Assistance",
         time: "10:30 AM",
-        status: "Waiting",
+        status: "Waiting" as const,  // Use 'as const' to fix the type
         queueNumber: 1,
         phone: "123-456-7890",
         email: "john@example.com",
@@ -108,7 +108,7 @@ export const initializeDemoData = () => {
         name: "Jane Smith",
         service: "Document Request",
         time: "10:35 AM",
-        status: "Waiting",
+        status: "Waiting" as const,  // Use 'as const' to fix the type
         queueNumber: 2,
         phone: "123-456-7891",
         email: "jane@example.com",
