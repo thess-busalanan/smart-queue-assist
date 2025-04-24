@@ -15,8 +15,22 @@ export interface QueueItem {
   date: string;
 }
 
-// Mock database for the frontend demo
-let queueDatabase: QueueItem[] = [];
+// Load queues from localStorage or initialize with demo data
+const loadQueuesFromStorage = (): QueueItem[] => {
+  const storedQueues = localStorage.getItem('queueDatabase');
+  if (storedQueues) {
+    return JSON.parse(storedQueues);
+  }
+  return [];
+};
+
+// Save queues to localStorage
+const saveQueuesToStorage = (queues: QueueItem[]) => {
+  localStorage.setItem('queueDatabase', JSON.stringify(queues));
+};
+
+// Initialize queue database from storage
+let queueDatabase: QueueItem[] = loadQueuesFromStorage();
 
 // Get queue by ID
 export const getQueueById = (id: string): QueueItem | undefined => {
@@ -36,6 +50,7 @@ export const getUserQueues = (userId: string): QueueItem[] => {
 // Add a new queue
 export const addQueue = (queue: QueueItem): QueueItem => {
   queueDatabase.push(queue);
+  saveQueuesToStorage(queueDatabase);
   return queue;
 };
 
@@ -44,6 +59,7 @@ export const updateQueueStatus = (id: string, status: QueueItem['status']): Queu
   const index = queueDatabase.findIndex(queue => queue.id === id);
   if (index !== -1) {
     queueDatabase[index].status = status;
+    saveQueuesToStorage(queueDatabase);
     return queueDatabase[index];
   }
   return undefined;
@@ -53,6 +69,7 @@ export const updateQueueStatus = (id: string, status: QueueItem['status']): Queu
 export const deleteQueue = (id: string): boolean => {
   const initialLength = queueDatabase.length;
   queueDatabase = queueDatabase.filter(queue => queue.id !== id);
+  saveQueuesToStorage(queueDatabase);
   return queueDatabase.length !== initialLength;
 };
 
@@ -65,10 +82,10 @@ export const getCurrentQueueNumber = (): number => {
   return 1; // Default starting number
 };
 
-// Initialize with some demo data
+// Initialize with some demo data if no queues exist
 export const initializeDemoData = () => {
   if (queueDatabase.length === 0) {
-    queueDatabase = [
+    const demoQueues = [
       {
         id: "S001",
         name: "John Doe",
@@ -104,6 +121,7 @@ export const initializeDemoData = () => {
         })
       },
     ];
+    demoQueues.forEach(queue => addQueue(queue));
   }
 };
 

@@ -31,7 +31,6 @@ import {
 } from "@/utils/queueService";
 import { showNotification } from "@/utils/firebase";
 
-// Service types
 const serviceTypes = [
   { id: "enrollment", name: "Enrollment Assistance" },
   { id: "document", name: "Document Request" },
@@ -58,7 +57,6 @@ const QueueManagementPage = () => {
   const navigate = useNavigate();
   const { toast } = useToast();
   
-  // Check if user is admin
   const userRole = localStorage.getItem('userRole');
   const isAuthenticated = localStorage.getItem('isAuthenticated') === 'true';
   
@@ -67,19 +65,21 @@ const QueueManagementPage = () => {
     return null;
   }
 
-  // Load queues from our service
   useEffect(() => {
     setQueues(getAllQueues());
+
+    const interval = setInterval(() => {
+      setQueues(getAllQueues());
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
-  // Filter queues based on active tab and search query
   const filteredQueues = queues.filter((queue) => {
-    // Filter by status tab
     if (activeTab !== "all" && queue.status.toLowerCase() !== activeTab) {
       return false;
     }
     
-    // Filter by search query
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       return (
@@ -92,7 +92,6 @@ const QueueManagementPage = () => {
     return true;
   });
   
-  // Handle queue actions
   const callStudent = (queue: QueueItem) => {
     updateQueueStatus(queue.id, "In Progress");
     
@@ -107,7 +106,6 @@ const QueueManagementPage = () => {
       description: `${queue.name} has been called for service.`,
     });
 
-    // Send notification to the student (in a real app, this would be sent to the specific user)
     showNotification(
       "It's Your Turn!", 
       `${queue.name}, please proceed to the service counter.`
@@ -172,10 +170,8 @@ const QueueManagementPage = () => {
       })
     };
     
-    // Add to our central service
     addQueue(newQueueItem);
     
-    // Update local state
     setQueues([...queues, newQueueItem]);
     setIsAddingQueue(false);
     setNewQueue({
@@ -193,17 +189,14 @@ const QueueManagementPage = () => {
     });
   };
   
-  // View queue details
   const viewQueueDetails = (queue: QueueItem) => {
     setSelectedQueue(queue);
   };
   
-  // Close queue details
   const closeQueueDetails = () => {
     setSelectedQueue(null);
   };
 
-  // Refresh queues from the service
   const refreshQueues = () => {
     setQueues(getAllQueues());
     toast({
